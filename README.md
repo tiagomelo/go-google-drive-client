@@ -28,7 +28,7 @@ Before using this client, you need to set up a Google Cloud Project and enable t
    - Choose or create a new service account.
    - Set the role to `Editor` or another role that grants the necessary permissions.
    - Select JSON for the key type and download the file.
-4. Save the downloaded JSON file in the `creds` directory.
+4. Save the downloaded JSON.
 
 For more detailed instructions, see the [Google Drive API documentation](https://developers.google.com/drive/api/v3/quickstart/go).
 
