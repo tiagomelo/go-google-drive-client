@@ -1,5 +1,7 @@
 # go-google-drive-client
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/tiagomelo/go-google-drive-client.svg)](https://pkg.go.dev/github.com/tiagomelo/go-google-drive-client)
+
 ![logo](go-google-drive-client.png)
 
 A simple Go client for interacting with Google Drive using the Google Drive API (v3).
