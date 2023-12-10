@@ -39,69 +39,16 @@ var (
 	ioCopy          = io.Copy
 )
 
-// Client defines the interface for interacting with Google Drive.
-type Client interface {
-	// CreateFolder creates a new folder in Google Drive with the specified name.
-	// The new folder can optionally be created within specified parent folders.
-	// Returns the ID of the created folder or an error if the operation fails.
-	CreateFolder(folderName string, parentFolders ...string) (string, error)
-
-	// UploadFile uploads a file to Google Drive.
-	// The file to upload is specified as an os.File pointer.
-	// The file can optionally be uploaded within specified parent folders.
-	// Returns the ID of the uploaded file or an error if the operation fails.
-	UploadFile(file *os.File, parentFolders ...string) (string, error)
-
-	// UpdateFile updates the content of an existing file in Google Drive.
-	// The file to update is specified by its file ID, and the new content is
-	// provided as an os.File pointer.
-	// Returns the ID of the updated file or an error if the operation fails.
-	UpdateFile(fileId string, newContent *os.File) (string, error)
-
-	// GetFileById retrieves the details of a file from Google Drive using its file ID.
-	// Returns a drive.File object containing file details or an error if retrieval fails.
-	GetFileById(fileId string) (*drive.File, error)
-
-	// DeleteFile deletes a file from Google Drive using its file ID.
-	// Returns an error if the deletion operation fails.
-	DeleteFile(fileId string) error
-
-	// AssignRoleToUserOnFile assigns a specified role to a user for a file in Google Drive.
-	// The role, user's email address, and file ID are specified.
-	// Returns an error if the role assignment operation fails.
-	AssignRoleToUserOnFile(role, emailAddress, fileId string) error
-
-	// AssignRoleToGroupOnFile assigns a specified role to a group for a file in Google Drive.
-	// The role, group's email address, and file ID are specified.
-	// Returns an error if the role assignment operation fails.
-	AssignRoleToGroupOnFile(role, emailAddress, fileId string) error
-
-	// AssignRoleToDomainOnFile assigns a specified role to a domain for a file in Google Drive.
-	// The role, domain, and file ID are specified.
-	// Returns an error if the role assignment operation fails.
-	AssignRoleToDomainOnFile(role, domain, fileId string) error
-
-	// AssignRoleToAnyoneOnFile assigns a specified role to anyone for a file in Google Drive.
-	// The role and file ID are specified.
-	// Returns an error if the role assignment operation fails.
-	AssignRoleToAnyoneOnFile(role, fileId string) error
-
-	// DownloadFile downloads a file from Google Drive using its file ID.
-	// The downloaded file is saved to the specified outputFile path.
-	// Returns the path of the downloaded file or an error if the download operation fails.
-	DownloadFile(fileId, outputFile string) (string, error)
-}
-
-// client is the concrete implementation of the Client interface, providing
-// methods to interact with Google Drive's file and permission services.
-type client struct {
+// Client provides functions to interact with Google Drive's file
+// and permission services.
+type Client struct {
 	srv  driveService
 	pSrv permissionsService
 }
 
 // New creates a new Client instance for interacting with Google Drive.
 // It initializes the drive service with the provided context and credentials file.
-func New(ctx context.Context, credsFilePath string) (Client, error) {
+func New(ctx context.Context, credsFilePath string) (*Client, error) {
 	srv, err := newDriveService(ctx, option.WithCredentialsFile(credsFilePath))
 	if err != nil {
 		return nil, errors.Wrap(err, "creating drive service")
@@ -111,13 +58,16 @@ func New(ctx context.Context, credsFilePath string) (Client, error) {
 		psw: &permissionsServiceWrapper{srv.Permissions},
 	}
 	pSrv := dsw.Permissions()
-	return &client{
+	return &Client{
 		srv:  dsw,
 		pSrv: pSrv,
 	}, nil
 }
 
-func (c *client) CreateFolder(folderName string, parentFolders ...string) (string, error) {
+// CreateFolder creates a new folder in Google Drive with the specified name.
+// The new folder can optionally be created within specified parent folders.
+// Returns the ID of the created folder or an error if the operation fails.
+func (c *Client) CreateFolder(folderName string, parentFolders ...string) (string, error) {
 	const mimeType = "application/vnd.google-apps.folder"
 	createdFolder, err := c.srv.Files().Create(&drive.File{
 		Name:     folderName,
@@ -130,7 +80,9 @@ func (c *client) CreateFolder(folderName string, parentFolders ...string) (strin
 	return createdFolder.Id, nil
 }
 
-func (c *client) GetFileById(fileId string) (*drive.File, error) {
+// GetFileById retrieves the details of a file from Google Drive using its file ID.
+// Returns a drive.File object containing file details or an error if retrieval fails.
+func (c *Client) GetFileById(fileId string) (*drive.File, error) {
 	driveFile, err := c.srv.Files().Get(fileId).Do()
 	if err != nil {
 		return nil, errors.Wrapf(err, "getting file with id %s", fileId)
@@ -138,7 +90,11 @@ func (c *client) GetFileById(fileId string) (*drive.File, error) {
 	return driveFile, nil
 }
 
-func (c *client) UploadFile(file *os.File, parentFolders ...string) (string, error) {
+// UploadFile uploads a file to Google Drive.
+// The file to upload is specified as an os.File pointer.
+// The file can optionally be uploaded within specified parent folders.
+// Returns the ID of the uploaded file or an error if the operation fails.
+func (c *Client) UploadFile(file *os.File, parentFolders ...string) (string, error) {
 	driveFile, err := c.srv.Files().Create(&drive.File{
 		Name:    filepath.Base(file.Name()),
 		Parents: parentFolders,
@@ -149,62 +105,22 @@ func (c *client) UploadFile(file *os.File, parentFolders ...string) (string, err
 	return driveFile.Id, nil
 }
 
-func (c *client) DeleteFile(fileId string) error {
-	if err := c.srv.Files().Delete(fileId).Do(); err != nil {
-		return errors.Wrapf(err, "deleting file with id %s", fileId)
+// UpdateFile updates the content of an existing file in Google Drive.
+// The file to update is specified by its file ID, and the new content is
+// provided as an os.File pointer.
+// Returns the ID of the updated file or an error if the operation fails.
+func (c *Client) UpdateFile(fileId string, newContent *os.File) (string, error) {
+	updatedFile, err := c.srv.Files().Update(fileId, nil).Media(newContent).Do()
+	if err != nil {
+		return "", errors.Wrapf(err, "updating file %s", fileId)
 	}
-	return nil
+	return updatedFile.Id, nil
 }
 
-func (c *client) assignPermissionOnFile(permission *drive.Permission, fileId string) error {
-	_, err := c.pSrv.Create(fileId, permission).Do()
-	return err
-}
-
-func (c *client) AssignRoleToUserOnFile(role, emailAddress, fileId string) error {
-	if err := c.assignPermissionOnFile(&drive.Permission{
-		EmailAddress: emailAddress,
-		Type:         UserGranteeType,
-		Role:         role,
-	}, fileId); err != nil {
-		return errors.Wrapf(err, "assigning role %s on file with id %s to email address %s", role, fileId, emailAddress)
-	}
-	return nil
-}
-
-func (c *client) AssignRoleToGroupOnFile(role, emailAddress, fileId string) error {
-	if err := c.assignPermissionOnFile(&drive.Permission{
-		EmailAddress: emailAddress,
-		Type:         GroupGranteeType,
-		Role:         role,
-	}, fileId); err != nil {
-		return errors.Wrapf(err, "assigning role %s on file with id %s to email address %s", role, fileId, emailAddress)
-	}
-	return nil
-}
-
-func (c *client) AssignRoleToDomainOnFile(role, domain, fileId string) error {
-	if err := c.assignPermissionOnFile(&drive.Permission{
-		Domain: domain,
-		Type:   DomainGranteeType,
-		Role:   role,
-	}, fileId); err != nil {
-		return errors.Wrapf(err, "assigning role %s on file with id %s to domain %s", role, fileId, domain)
-	}
-	return nil
-}
-
-func (c *client) AssignRoleToAnyoneOnFile(role, fileId string) error {
-	if err := c.assignPermissionOnFile(&drive.Permission{
-		Type: AnyoneGranteeType,
-		Role: role,
-	}, fileId); err != nil {
-		return errors.Wrapf(err, "assigning role %s on file with id %s to anyone", role, fileId)
-	}
-	return nil
-}
-
-func (c *client) DownloadFile(fileId, outputFile string) (string, error) {
+// DownloadFile downloads a file from Google Drive using its file ID.
+// The downloaded file is saved to the specified outputFile path.
+// Returns the path of the downloaded file or an error if the download operation fails.
+func (c *Client) DownloadFile(fileId, outputFile string) (string, error) {
 	resp, err := c.srv.Files().Get(fileId).Download()
 	if err != nil {
 		return "", errors.Wrapf(err, "downloading file with id %s", fileId)
@@ -221,10 +137,71 @@ func (c *client) DownloadFile(fileId, outputFile string) (string, error) {
 	return f.Name(), nil
 }
 
-func (c *client) UpdateFile(fileId string, newContent *os.File) (string, error) {
-	updatedFile, err := c.srv.Files().Update(fileId, nil).Media(newContent).Do()
-	if err != nil {
-		return "", errors.Wrapf(err, "updating file %s", fileId)
+// DeleteFile deletes a file from Google Drive using its file ID.
+// Returns an error if the deletion operation fails.
+func (c *Client) DeleteFile(fileId string) error {
+	if err := c.srv.Files().Delete(fileId).Do(); err != nil {
+		return errors.Wrapf(err, "deleting file with id %s", fileId)
 	}
-	return updatedFile.Id, nil
+	return nil
+}
+
+func (c *Client) assignPermissionOnFile(permission *drive.Permission, fileId string) error {
+	_, err := c.pSrv.Create(fileId, permission).Do()
+	return err
+}
+
+// AssignRoleToUserOnFile assigns a specified role to a user for a file in Google Drive.
+// The role, user's email address, and file ID are specified.
+// Returns an error if the role assignment operation fails.
+func (c *Client) AssignRoleToUserOnFile(role, emailAddress, fileId string) error {
+	if err := c.assignPermissionOnFile(&drive.Permission{
+		EmailAddress: emailAddress,
+		Type:         UserGranteeType,
+		Role:         role,
+	}, fileId); err != nil {
+		return errors.Wrapf(err, "assigning role %s on file with id %s to email address %s", role, fileId, emailAddress)
+	}
+	return nil
+}
+
+// AssignRoleToGroupOnFile assigns a specified role to a group for a file in Google Drive.
+// The role, group's email address, and file ID are specified.
+// Returns an error if the role assignment operation fails.
+func (c *Client) AssignRoleToGroupOnFile(role, emailAddress, fileId string) error {
+	if err := c.assignPermissionOnFile(&drive.Permission{
+		EmailAddress: emailAddress,
+		Type:         GroupGranteeType,
+		Role:         role,
+	}, fileId); err != nil {
+		return errors.Wrapf(err, "assigning role %s on file with id %s to email address %s", role, fileId, emailAddress)
+	}
+	return nil
+}
+
+// AssignRoleToDomainOnFile assigns a specified role to a domain for a file in Google Drive.
+// The role, domain, and file ID are specified.
+// Returns an error if the role assignment operation fails.
+func (c *Client) AssignRoleToDomainOnFile(role, domain, fileId string) error {
+	if err := c.assignPermissionOnFile(&drive.Permission{
+		Domain: domain,
+		Type:   DomainGranteeType,
+		Role:   role,
+	}, fileId); err != nil {
+		return errors.Wrapf(err, "assigning role %s on file with id %s to domain %s", role, fileId, domain)
+	}
+	return nil
+}
+
+// AssignRoleToAnyoneOnFile assigns a specified role to anyone for a file in Google Drive.
+// The role and file ID are specified.
+// Returns an error if the role assignment operation fails.
+func (c *Client) AssignRoleToAnyoneOnFile(role, fileId string) error {
+	if err := c.assignPermissionOnFile(&drive.Permission{
+		Type: AnyoneGranteeType,
+		Role: role,
+	}, fileId); err != nil {
+		return errors.Wrapf(err, "assigning role %s on file with id %s to anyone", role, fileId)
+	}
+	return nil
 }

@@ -97,7 +97,7 @@ func TestCreateFolder(t *testing.T) {
 		mfs.fcc = mfcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfcc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			output, err := client.CreateFolder("someFolder", "parentFolder")
@@ -152,7 +152,7 @@ func TestUploadFile(t *testing.T) {
 		mfcc.fcc = mfcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfcc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			output, err := client.UploadFile(tc.file, "parentFolder")
@@ -205,7 +205,7 @@ func TestGetFileById(t *testing.T) {
 		mfs.fgc = mfgc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfgc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			output, err := client.GetFileById("fileId")
@@ -250,7 +250,7 @@ func TestDeleteFile(t *testing.T) {
 		mfs.fdc = mfdc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfdc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			err := client.DeleteFile("fileId")
@@ -292,7 +292,7 @@ func TestAssignRoleToUserOnFile(t *testing.T) {
 		mps.pcc = mpcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mpcc)
-			client := &client{
+			client := &Client{
 				pSrv: mps,
 			}
 			err := client.AssignRoleToUserOnFile("some role", "email", "fileId")
@@ -334,7 +334,7 @@ func TestAssignRoleToGroupOnFile(t *testing.T) {
 		mps.pcc = mpcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mpcc)
-			client := &client{
+			client := &Client{
 				pSrv: mps,
 			}
 			err := client.AssignRoleToGroupOnFile("some role", "email", "fileId")
@@ -376,7 +376,7 @@ func TestAssignRoleToDomainOnFile(t *testing.T) {
 		mps.pcc = mpcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mpcc)
-			client := &client{
+			client := &Client{
 				pSrv: mps,
 			}
 			err := client.AssignRoleToDomainOnFile("some role", "domain", "fileId")
@@ -418,7 +418,7 @@ func TestAssignRoleToAnyoneOnFile(t *testing.T) {
 		mps.pcc = mpcc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mpcc)
-			client := &client{
+			client := &Client{
 				pSrv: mps,
 			}
 			err := client.AssignRoleToAnyoneOnFile("some role", "fileId")
@@ -525,7 +525,7 @@ func TestDownloadFile(t *testing.T) {
 		}()
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfgc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			output, err := client.DownloadFile("filedId", "/path/to/file/test")
@@ -577,7 +577,7 @@ func TestUpdateFile(t *testing.T) {
 		mfuc.fuc = mfuc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockClosure(mfuc)
-			client := &client{
+			client := &Client{
 				srv: mds,
 			}
 			output, err := client.UpdateFile("fileId", &os.File{})
